@@ -1,0 +1,39 @@
+workspaces add CLIENT
+use recon/domains-hosts/ssl_san
+set SOURCE DOMAIN
+run
+back
+use recon/domains-hosts/bing_domain_web
+set SOURCE DOMAIN
+run
+back
+use recon/domains-hosts/google_site_web
+set SOURCE DOMAIN
+run
+back
+use recon/domains-hosts/yahoo_site
+set SOURCE DOMAIN
+run
+back
+use recon/domains-hosts/baidu_site
+set SOURCE DOMAIN
+run
+back
+use recon/domains-domains/brute_suffix
+set SOURCE DOMAIN
+run
+back
+use recon/netblocks-ports/census_2012
+set source DOMAIN
+run
+back
+use recon/hosts-hosts/ip_neighbor
+run
+back
+use recon/hosts-hosts/resolve
+run
+back
+use reporting/csv
+run
+back
+exit
