@@ -65,14 +65,15 @@ scriptloc=/mnt/hgfs/isadmintools/GitHub/Recon
 
 mkdir -p /root/$folder
 mkdir -p $path
-mkdir -p $path/recon-ng
+mkdir -p $path/Identification
+mkdir -p $path/Identification/recon-ng
 
 while read -u 10 domain; do
-	sed -e "s/CLIENT/$client/g" $scriptloc/recon-ng_temp.rc > $path/recon-ng/$client.tmp
-	sed -e "s/DOMAIN/$domain/g" $path/recon-ng/$client.tmp > $path/recon-ng/$domain.recon-ng.rc
+	sed -e "s/CLIENT/$client/g" $scriptloc/recon-ng_temp.rc > $path/Identification/recon-ng/$client.tmp
+	sed -e "s/DOMAIN/$domain/g" $path/Identification/recon-ng/$client.tmp > $path/Identification/recon-ng/$domain.recon-ng.rc
 done 10<$1
-rm $path/recon-ng/*.tmp
+rm $path/Identification/recon-ng/*.tmp
 
-for f in $path/recon-ng/*.rc; do recon-ng -r $f; done
+for f in $path/Identification/recon-ng/*.rc; do recon-ng -r $f; done
 
-cp /root/.recon-ng/workspaces/$client/results.csv $path/recon-ng.results.csv
+cp /root/.recon-ng/workspaces/$client/results.csv $path/Identification/recon-ng/recon-ng.results.csv
