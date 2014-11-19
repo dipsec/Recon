@@ -54,6 +54,7 @@
 # TO DO
 # ---------
 # Add WHOIS checks
+# add modules for specific checks
 
 if [[ -z $1 ]]; then
 	echo Usage: recon.sh [DOMAINS FILE NAME] [CLIENT NAME]
@@ -67,14 +68,28 @@ if [[ -z $2 ]]; then
 	exit
 fi
 
+
 domains=$1
 client=$2
+REPLY=n
 ##################### Replace Folder Location ######################
 folder=in-epa-nov17
 path=~/$folder/$client
 ##################### Replace Script Location ######################
 scriptloc=/mnt/hgfs/isadmintools/GitHub/Recon
 wordlists=/root/scripts/SecLists
+
+echo;
+echo Save files to: $path
+echo Call scripts from: $scriptloc
+echo Wordlist location: $wordlists
+read -p "Do any of these variables need to be updated? [Y/N]    "
+if [ "$REPLY" == "y" -o "$REPLY" == "Y" ]; then
+	echo;
+	exit
+else
+    echo Continuing...
+fi
 
 mkdir -p /root/$folder
 mkdir -p $path
@@ -91,20 +106,26 @@ mkdir -p $path/Assessment/Web/web_docs
 while read -u 10 domain; do
 	echo $domain
 
-	theharvester -d $domain -b all -vn -f $path/Identification/harvester/$domain.harvester.xml 2>&1 |tee $path/Identification/harvester/$domain.harvester.txt
-	sed -n '/Emails found:/,/Hosts found/p' $path/Identification/harvester/$domain.harvester.txt |grep -v Hosts |grep -v Emails|grep -v '-' > $path/Identification/harvester/$domain.emails.txt
-	sed -n '/Hosts found in search engines/,/active queries/p' $path/Identification/harvester/$domain.harvester.txt |grep -v Hosts |grep -v queries|grep -v '-' |sed -e 's/:/,/g' > $path/Identification/harvester/$domain.SearchEngines.txt
-	sed -n '/Hosts found after reverse lookup/,/Virtual hosts/p' $path/Identification/harvester/$domain.harvester.txt |grep -v Hosts |grep -v hosts|grep -v '-' |sed -e 's/:/,/g' > $path/Identification/harvester/$domain.ReverseLookup.txt
-	sed -n '/Virtual hosts/,$p' $path/Identification/harvester/$domain.harvester.txt |grep -v Hosts |grep -v hosts|grep -v '=' > $path/Identification/harvester/$domain.VirtualHosts.txt
+mkdir -p $path/Identification/DNS/$domain
+mkdir -p $path/Identification/harvester/$domain
+mkdir -p $path/Assessment/Web/cewl/$domain
+mkdir -p $path/Assessment/Web/web_docs/$domain
+
+	theharvester -d $domain -b all -vn -f $path/Identification/harvester/$domain/$domain.harvester.html 2>&1 |tee $path/Identification/harvester/$domain/$domain.harvester.txt
+	sed -n '/Emails found:/,/Hosts found/p' $path/Identification/harvester/$domain/$domain.harvester.txt |grep -v Hosts |grep -v Emails|grep -v '-' > $path/Identification/harvester/$domain/$domain.emails.txt
+	sed -n '/Hosts found in search engines/,/active queries/p' $path/Identification/harvester/$domain/$domain.harvester.txt |grep -v Hosts |grep -v queries|grep -v '-' |sed -e 's/:/,/g' > $path/Identification/harvester/$domain/$domain.SearchEngines.txt
+	sed -n '/Hosts found after reverse lookup/,/Virtual hosts/p' $path/Identification/harvester/$domain/$domain.harvester.txt |grep -v Hosts |grep -v hosts|grep -v '-' |sed -e 's/:/,/g' > $path/Identification/harvester/$domain/$domain.ReverseLookup.txt
+	sed -n '/Virtual hosts/,$p' $path/Identification/harvester/$domain/$domain.harvester.txt |grep -v Hosts |grep -v hosts|grep -v '=' > $path/Identification/harvester/$domain/$domain.VirtualHosts.txt
 	wget -t 5 -e robots=off $domain/robots.txt -O $path/Assessment/Web/robots/$domain.robots.txt
-	cewl --count --verbose -m 8 -o --write $path/Assessment/Web/cewl/$domain.txt --meta --meta_file $path/Assessment/Web/cewl/$domain.meta.txt --email --email_file $path/Assessment/Web/cewl/$domain.emails.txt $domain
-	wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P $path/Assessment/Web/web_docs $domain
+	cewl --count --verbose -m 8 -o --write $path/Assessment/Web/cewl/$domain/$domain.passwordscrape.txt --meta --meta_file $path/Assessment/Web/cewl/$domain/$domain.meta.txt --email --email_file $path/Assessment/Web/cewl/$domain/$domain.emails.txt $domain
+	wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P $path/Assessment/Web/web_docs/$domain $domain
 	dig $domain NS > $path/Identification/DNS/$domain.nameserver.txt
 	dig $domain MX > $path/Identification/DNS/$domain.mailserver.txt
-	dnsenum --threads 20 -f $wordlists/DNS/deepmagic.com_top50kprefixes.txt -u a -r -p 15 -s 15 --subfile $path/Identification/DNS/$domain.subdomains.txt -o $path/Identification/DNS/$domain.dnsenum.xml $domain 2>&1 |tee $path/Identification/DNS/$domain.dnsenum.txt
+	dig $domain A > $path/Identification/DNS/$domain.address.txt
+	dnsenum --threads 20 -f $wordlists/DNS/deepmagic.com_top50kprefixes.txt -u a -r -p 15 -s 15 --subfile $path/Identification/DNS/$domain/$domain.subdomains.txt -o $path/Identification/DNS/$domain/$domain.dnsenum.xml $domain 2>&1 |tee $path/Identification/DNS/$domain/$domain.dnsenum.txt
 done 10<$domains
 
-$scriptloc/whois.pl -i $domains -o $path/Identification/WHOIS
-$scriptloc/Whois_LockandExpiration.pl -i $domains -o Identification/WHOIS/WhoisLockAndExpiration-$client.csv
-$scriptloc/DNSDigger.pl -d $domains > Identification/DNS/DNSDigger-$client.csv
+perl $scriptloc/whois.pl -i $domains -o $path/Identification/WHOIS
+perl $scriptloc/Whois_LockandExpiration.pl -i $domains -o Identification/WHOIS/WhoisLockAndExpiration-$client.csv
+perl $scriptloc/DNSDigger.pl -d $domains > Identification/DNS/DNSDigger-$client.csv
 $scriptloc/recon-ng_script.sh $domains $client

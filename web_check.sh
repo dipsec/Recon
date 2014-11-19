@@ -263,7 +263,7 @@ echo -e "\e[0m"
                 sed -n '/Virtual hosts/,$p' harvester/$ip.txt |grep -v Hosts |grep -v hosts|grep -v '=' > harvester/$ship.VirtualHosts.txt
          nikto -host $sh -output nikto/hostnames/nikto.$ship.$shport.txt
         wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P web_docs $sh
-        sslscan --no-failed --xml=sslscan/hostnames/sslscan_$ship.$shport.xml $sh
+        sslscan --no-failed --xml=sslscan/hostnames/sslscan_$ship.$shport.xml $ship:$shport
         sslyze $sh --reneg --compression --hide_rejected_ciphers --xml_out=sslyze/hostnames/sslyze_$ship.$shport.xml
         echo;
 done 10< hostfiles/HTTPSHostnames.txt
@@ -313,7 +313,7 @@ echo -e "\e[0m"
 	nmap --script http-vhosts -p $sport $sip -oA nmap/$sip.$sport
         nikto -host $s -output nikto/IPs/nikto.$sip.txt
         wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P web_docs $s
-        sslscan --no-failed --xml=sslscan/IPs/sslscan_$sip.$sport.xml $s
+        sslscan --no-failed --xml=sslscan/IPs/sslscan_$sip.$sport.xml $sip:$sport
         sslyze $s --reneg --compression --hide_rejected_ciphers --xml_out=sslyze/IPs/sslyze_$sip.$sport.xml
         echo;
 done 10< hostfiles/HTTPSIPs.txt

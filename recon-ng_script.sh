@@ -43,6 +43,7 @@
 # TO DO
 # ---------
 # Help file
+# link recon with recon-ng - pass multiple params
 
 if [[ -z $1 ]]; then
 	echo Usage: recon-ng_script.sh [DOMAINS FILE NAME] [CLIENT NAME]
