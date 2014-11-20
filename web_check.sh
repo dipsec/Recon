@@ -41,9 +41,32 @@
 # Ensure that you have the appropriate legal permission before running it
 # someone else's system.
 #
+# Usage
+# -----
+# web_check.sh [OPTION] [FILENAME]
+# web_check.sh -nhc domains.txt
+# web_check.sh -a domains.txt
+#  OPTIONS"
+#   -n :Nikto Scanner"
+#   -h :Harvester"
+#   -v :nmap Virtual Host NSE"
+#   -c :cewl web scrape for passwords"
+#   -w :Web Scrape for Documents"
+#   -r :robots.txt Download"
+#   -s :sslscan/sslyze SSL Checks"
+#   -a :All Checks"
+#
 #
 # Changelog
 # ---------
+# version 2.1
+# Fixed SSL Scan bugs
+# version 2.0
+# Added:
+# Selection of scans to perform
+# --help option
+# Fixed bugs in sort and remove dups function
+#
 # version 1.3
 # Split host file into IPs and Hostnames
 #
@@ -68,16 +91,41 @@
 #
 # TO DO
 # ---------
-# check if IP or hostname
-# Options to choose which scan - rev 2.0
-# Possibly pass scan option parameters through script call
+# Option to change custom script location
 
-
-if [[ -z $1 ]]; then
-	echo Usage: web_check.sh [FILE NAME]
-	echo;
-	exit
+# Check 2 arguments are given #
+if [[ $# -lt 2 ]] || [[ $1 == --help ]] || [[ $1 != -*[nhvcwrsa]* ]]; then
+        echo "Usage : web_check.sh [OPTION] [FILENAME]"
+        echo "  web_check.sh -nhc domains.txt"
+        echo "  web_check.sh -a domains.txt"
+        echo "========================================"
+	echo "  OPTIONS"
+	echo "   -n	:Nikto Scanner"
+	echo "   -h	:Harvester"
+	echo "   -v	:nmap Virtual Host NSE"
+	echo "   -c	:cewl web scrape for passwords"
+	echo "   -w	:Web Scrape for Documents"
+	echo "   -r :robots.txt Download"
+	echo "   -s	:sslscan/sslyze SSL Checks"
+    echo "   -a :All Checks"
+        exit
 fi
+
+# Check the given file is exist #
+if [ ! -f $2 ]
+then
+        echo "Filename given \"$2\" doesn't exist"
+        exit
+fi
+
+file=$2
+option=$1
+
+#if [[ -z $1 ]]; then
+#	echo Usage: web_check.sh [FILENAME]
+#	echo;
+#	exit
+#fi
 
 while read -u 10 f; do
    if [[ $f == http* ]] || [[ -z $f ]]; then
@@ -88,9 +136,10 @@ while read -u 10 f; do
         echo;
         exit
    fi
-done 10< $1
+done 10< $file
 
-file=$1
+custtoolloc=/root/toolsv3/Assessment/Access/Web
+
 # Sort and Remove Dups in original list
 sort -u $file > $file.tmp
 sed '/^$/d' $file.tmp > $file
@@ -114,8 +163,6 @@ mkdir -p sslyze/IPs
 mkdir -p sslyze/hostnames
 mkdir -p harvester
 mkdir -p nmap
-
-custtoolloc=/root/toolsv3/Assessment/Access/Web
 
 CreateHostFiles()
 {
@@ -147,13 +194,6 @@ while read -u 10 h; do
 	fi
 done 10< hostfiles/http_hosts.txt
 
-####################### VERIFY IF BELOW IS NEEDED ##########################
-# HTTPS Hosts IP:Port
-#cat $file |grep https |cut -d"/" -f3 > hostfiles/sslhosts.txt
-# Non-SSL Hosts IP:Port
-#cat $file |grep -v https |cut -d"/" -f3 > hostfiles/hosts.txt
-###########################################################################
-
 # Get Hostname from cert
 ruby $custtoolloc/getcertcn.rb hostfiles/HTTPSIPs.txt > getcertcn.hostnames.txt
 ruby $custtoolloc/getcertcn.rb hostfiles/HTTPSHostnames.txt >> getcertcn.hostnames.txt
@@ -161,22 +201,22 @@ ruby $custtoolloc/getcertcn.rb hostfiles/HTTPSHostnames.txt >> getcertcn.hostnam
 
 # Get Hostname from DNS (HTTP)
 while read -u 10 d; do
-        ip=$(echo $d | cut -d":" -f1)
-        port=$(echo $d | cut -d":" -f2)
+        ip=$(echo $d |cut -d"/" -f3 |cut -d":" -f1)
+        port=$(echo $d |cut -d"/" -f3 | cut -d":" -f2)
         dig +short -x $ip | xargs echo -n >> hostfiles/HTTPHostnames.tmp
         sed -i 's/[.\t]*$//' hostfiles/HTTPHostnames.tmp
         echo :$port >> hostfiles/HTTPHostnames.tmp
 	sed -i '/:\/\/:/d' hostfiles/HTTPHostnames.tmp
 #	sed -ni '/^\(:80\)$/!p' hostfiles/HTTPHostnames.tmp
 done 10< hostfiles/HTTPIPs.txt
-cat hostfiles/HTTPHostnames.tmp |sed 's/^/http:\/\//g' > hostfiles/HTTPHostnames.tmp #txt
-sed -i '/:\/\/:/d' hostfiles/HTTPHostnames.tmp #txt
-cat hostfiles/HTTPHostnames.tmp |grep -v 'connection timed out' >> hostfiles/HTTPHostnames.txt
+cat hostfiles/HTTPHostnames.tmp |sed 's/^/http:\/\//g' > hostfiles/HTTPHostnames2.tmp #txt
+sed -i '/:\/\/:/d' hostfiles/HTTPHostnames2.tmp #txt
+cat hostfiles/HTTPHostnames2.tmp |grep -v 'connection timed out' >> hostfiles/HTTPHostnames.txt
 
 # Get Hostname from DNS (HTTPS)
 while read -u 10 s; do
-        ip=$(echo $s | cut -d":" -f1)
-        port=$(echo $s | cut -d":" -f2)
+        ip=$(echo $s |cut -d"/" -f3 | cut -d":" -f1)
+        port=$(echo $s |cut -d"/" -f3 | cut -d":" -f2)
         dig +short -x $ip | xargs echo -n >> hostfiles/HTTPSHostnames.tmp
         sed -i 's/[.\t]*$//' hostfiles/HTTPSHostnames.tmp
         echo :$port >> hostfiles/HTTPSHostnames.tmp
@@ -185,28 +225,22 @@ done 10< hostfiles/HTTPSIPs.txt
 # SSL hostname
 # cat hostfiles/HTTPSHostnames.tmp > hostfiles/HTTPSHostnames.txt
 # SSL https://hostname
-cat hostfiles/HTTPSHostnames.tmp |sed 's/^/https:\/\//g' > hostfiles/HTTPSHostnames.tmp #txt
-sed -i '/:\/\/:/d' hostfiles/HTTPSHostnames.tmp #txt
-cat hostfiles/HTTPSHostnames.tmp |grep -v 'connection timed out' >> hostfiles/HTTPSHostnames.txt
+cat hostfiles/HTTPSHostnames.tmp |sed 's/^/https:\/\//g' > hostfiles/HTTPSHostnames2.tmp #txt
+sed -i '/:\/\/:/d' hostfiles/HTTPSHostnames2.tmp #txt
+cat hostfiles/HTTPSHostnames2.tmp |grep -v 'connection timed out' >> hostfiles/HTTPSHostnames.txt
 }
 
 RemoveDups()
 {
 # Removes duplicate entries and blank lines
-#	sort -u hostfiles/hosts.txt > hostfiles/hosts.txt.tmp
-#	sed '/^$/d' hostfiles/hosts.txt.tmp > hostfiles/hosts.txt
 	sort -u hostfiles/HTTPHostnames.txt > hostfiles/HTTPHostnames.txt.tmp
 	sed '/^$/d' hostfiles/HTTPHostnames.txt.tmp > hostfiles/HTTPHostnames.txt
-#	sort -u hostfiles/http_hosts.txt > hostfiles/http_hosts.txt.tmp
-#	sed '/^$/d' hostfiles/http_hosts.txt.tmp > hostfiles/http_hosts.txt
+	sort -u hostfiles/HTTPIPs.txt > hostfiles/HTTPIPs.txt.tmp
+	sed '/^$/d' hostfiles/HTTPIPs.txt.tmp > hostfiles/HTTPIPs.txt
 	sort -u hostfiles/HTTPSHostnames.txt > hostfiles/HTTPSHostnames.txt.tmp
 	sed '/^$/d' hostfiles/HTTPSHostnames.txt.tmp > hostfiles/HTTPSHostnames.txt
-#	sort -u hostfiles/https_hosts.txt > hostfiles/https_hosts.txt.tmp
-#	sed '/^$/d' hostfiles/https_hosts.txt.tmp > hostfiles/https_hosts.txt
-#	sort -u hostfiles/SSL_Hostnames.txt > hostfiles/SSL_Hostnames.txt.tmp
-#	sed '/^$/d' hostfiles/SSL_Hostnames.txt.tmp > hostfiles/SSL_Hostnames.txt
-#	sort -u hostfiles/sslhosts.txt > hostfiles/sslhosts.txt.tmp
-#	sed '/^$/d' hostfiles/sslhosts.txt.tmp > hostfiles/sslhosts.txt
+	sort -u hostfiles/HTTPSIPs.txt > hostfiles/HTTPSIPs.txt.tmp
+	sed '/^$/d' hostfiles/HTTPSIPs.txt.tmp > hostfiles/HTTPSIPs.txt
 	rm -f hostfiles/*.tmp
 	rm -f *.tmp
 }
@@ -226,16 +260,18 @@ while read -u 10 h; do
         echo IP: $ip
         echo Port: $port
 echo -e "\e[0m"
-        wget -t 5 $h/robots.txt -O robots/$ip.$port.robots.txt
-        cewl --count --verbose --write cewl/hostnames/$ip.$port.cewl.txt --meta --meta_file cewl/hostnames/$ip.$port.cewl.meta.txt --email --email_file cewl/hostnames/$ip.$port.cewl.emails.txt $h
-        nmap --script http-vhosts -p $port $ip -oA nmap/$ip.$port
-	theharvester -d $ip -b all -vn -f harvester/$ip.xml 2>&1 | tee harvester/$ip.txt
-		sed -n '/Emails found:/,/Hosts found/p' harvester/$ip.txt |grep -v Hosts |grep -v Emails|grep -v '-' > harvester/$ip.emails.txt
-		sed -n '/Hosts found in search engines/,/active queries/p' harvester/$ip.txt |grep -v Hosts |grep -v queries|grep -v '-' |sed -e 's/:/,/g' > harvester/$ip.SearchEngine.csv
-		sed -n '/Hosts found after reverse lookup/,/Virtual hosts/p' harvester/$ip.txt |grep -v Hosts |grep -v hosts|grep -v '-' |sed -e 's/:/,/g' > harvester/$ip.ReverseHosts.csv
-		sed -n '/Virtual hosts/,$p' harvester/$ip.txt |grep -v Hosts |grep -v hosts|grep -v '=' > harvester/$ip.VirtualHosts.txt
-        nikto -host $h -output nikto/hostnames/nikto.$ip.$port.txt
-        wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P web_docs $h
+        if [[ $option == *[r]* ]] || [[ $option == *[a]* ]]; then wget -t 5 $h/robots.txt -O robots/$ip.$port.robots.txt; fi
+        if [[ $option == *[c]* ]] || [[ $option == *[a]* ]]; then cewl --count --verbose --write cewl/hostnames/$ip.$port.cewl.txt --meta --meta_file cewl/hostnames/$ip.$port.cewl.meta.txt --email --email_file cewl/hostnames/$ip.$port.cewl.emails.txt $h; fi
+        if [[ $option == *[v]* ]] || [[ $option == *[a]* ]]; then nmap --script http-vhosts -p $port $ip -oA nmap/$ip.$port; fi
+        if [[ $option == *[h]* ]] || [[ $option == *[a]* ]]; then
+        	theharvester -d $ip -b all -vn -f harvester/$ip.xml 2>&1 | tee harvester/$ip.txt
+            sed -n '/Emails found:/,/Hosts found/p' harvester/$ip.txt |grep -v Hosts |grep -v Emails|grep -v '-' > harvester/$ip.emails.txt
+            sed -n '/Hosts found in search engines/,/active queries/p' harvester/$ip.txt |grep -v Hosts |grep -v queries|grep -v '-' |sed -e 's/:/,/g' > harvester/$ip.SearchEngine.csv
+            sed -n '/Hosts found after reverse lookup/,/Virtual hosts/p' harvester/$ip.txt |grep -v Hosts |grep -v hosts|grep -v '-' |sed -e 's/:/,/g' > harvester/$ip.ReverseHosts.csv
+            sed -n '/Virtual hosts/,$p' harvester/$ip.txt |grep -v Hosts |grep -v hosts|grep -v '=' > harvester/$ip.VirtualHosts.txt
+        fi
+        if [[ $option == *[n]* ]] || [[ $option == *[a]* ]]; then nikto -host $h -output nikto/hostnames/nikto.$ip.$port.txt; fi
+        if [[ $option == *[w]* ]] || [[ $option == *[a]* ]]; then wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P web_docs $h; fi
         echo;
 done 10< hostfiles/HTTPHostnames.txt
 }
@@ -253,18 +289,22 @@ while read -u 10 sh; do
         echo IP: $ship
         echo Port: $shport
 echo -e "\e[0m"
-        wget -t 5 $sh/robots.txt -O robots/$ship.$shport.robots.txt
-        cewl --count --verbose --write cewl/hostnames/$ship.$shport.cewl.txt --meta --meta_file cewl/hostnames/$ship.$shport.cewl.meta.txt --email --email_file cewl/hostnames/$ship.$shport.cewl.emails.txt $sh
-        nmap --script http-vhosts -p $shport $ship -oA nmap/$ship.$shport
-        theharvester -d $ship -b all -vn -f harvester/$ship.xml 2>&1 | tee harvester/$ship.txt
-                sed -n '/Emails found:/,/Hosts found/p' harvester/$ip.txt |grep -v Hosts |grep -v Emails|grep -v '-' > harvester/$ship.emails.txt
-                sed -n '/Hosts found in search engines/,/active queries/p' harvester/$ip.txt |grep -v Hosts |grep -v queries|grep -v '-' |sed -e 's/:/,/g' > harvester/$ship.SearchEngine.csv
-                sed -n '/Hosts found after reverse lookup/,/Virtual hosts/p' harvester/$ip.txt |grep -v Hosts |grep -v hosts|grep -v '-' |sed -e 's/:/,/g' > harvester/$ship.ReverseHosts.csv
-                sed -n '/Virtual hosts/,$p' harvester/$ip.txt |grep -v Hosts |grep -v hosts|grep -v '=' > harvester/$ship.VirtualHosts.txt
-         nikto -host $sh -output nikto/hostnames/nikto.$ship.$shport.txt
-        wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P web_docs $sh
-        sslscan --no-failed --xml=sslscan/hostnames/sslscan_$ship.$shport.xml $ship:$shport
-        sslyze $sh --reneg --compression --hide_rejected_ciphers --xml_out=sslyze/hostnames/sslyze_$ship.$shport.xml
+        if [[ $option == *[r]* ]] || [[ $option == *[a]* ]]; then wget -t 5 $sh/robots.txt -O robots/$ship.$shport.robots.txt; fi
+        if [[ $option == *[c]* ]] || [[ $option == *[a]* ]]; then cewl --count --verbose --write cewl/hostnames/$ship.$shport.cewl.txt --meta --meta_file cewl/hostnames/$ship.$shport.cewl.meta.txt --email --email_file cewl/hostnames/$ship.$shport.cewl.emails.txt $sh; fi
+        if [[ $option == *[v]* ]] || [[ $option == *[a]* ]]; then nmap --script http-vhosts -p $shport $ship -oA nmap/$ship.$shport; fi
+        if [[ $option == *[h]* ]] || [[ $option == *[a]* ]]; then
+            theharvester -d $ship -b all -vn -f harvester/$ship.xml 2>&1 | tee harvester/$ship.txt
+            sed -n '/Emails found:/,/Hosts found/p' harvester/$ip.txt |grep -v Hosts |grep -v Emails|grep -v '-' > harvester/$ship.emails.txt
+            sed -n '/Hosts found in search engines/,/active queries/p' harvester/$ip.txt |grep -v Hosts |grep -v queries|grep -v '-' |sed -e 's/:/,/g' > harvester/$ship.SearchEngine.csv
+            sed -n '/Hosts found after reverse lookup/,/Virtual hosts/p' harvester/$ip.txt |grep -v Hosts |grep -v hosts|grep -v '-' |sed -e 's/:/,/g' > harvester/$ship.ReverseHosts.csv
+            sed -n '/Virtual hosts/,$p' harvester/$ip.txt |grep -v Hosts |grep -v hosts|grep -v '=' > harvester/$ship.VirtualHosts.txt
+        fi
+        if [[ $option == *[n]* ]] || [[ $option == *[a]* ]]; then nikto -host $sh -output nikto/hostnames/nikto.$ship.$shport.txt; fi
+        if [[ $option == *[w]* ]] || [[ $option == *[a]* ]]; then wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P web_docs $sh; fi
+        if [[ $option == *[s]* ]] || [[ $option == *[a]* ]]; then 
+            sslscan --no-failed --xml=sslscan/hostnames/sslscan_$ship.$shport.xml $ship:$shport 2>&1 | tee harvester/$ship.txt 2>&1 | tee sslscan/hostnames/sslscan_$ship.$shport.txt
+            sslyze --reneg --compression --hide_rejected_ciphers --xml_out=sslyze/hostnames/sslyze_$ship.$shport.xml $ship:$shport 2>&1 | tee sslyze/hostnames/sslyze_$ship.$shport.txt
+        fi
         echo;
 done 10< hostfiles/HTTPSHostnames.txt
 }
@@ -285,11 +325,11 @@ while read -u 10 h; do
         echo IP: $ip
         echo Port: $port
 echo -e "\e[0m"
-	wget -t 5 $h/robots.txt -O robots/$ip.$port.robots.txt
-	cewl --count --verbose --write cewl/IPs/$ip.$port.cewl.txt --meta --meta_file cewl/IPs/$ip.$port.cewl.meta.txt --email --email_file cewl/IPs/$ip.$port.cewl.emails.txt $h
-	nmap --script http-vhosts -p $port $ip -oA nmap/$ip.$port
-	nikto -host $h -output nikto/IPs/nikto.$ip.$port.txt
-	wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P web_docs $h
+	if [[ $option == *[r]* ]] || [[ $option == *[a]* ]]; then wget -t 5 $h/robots.txt -O robots/$ip.$port.robots.txt; fi
+	if [[ $option == *[c]* ]] || [[ $option == *[a]* ]]; then cewl --count --verbose --write cewl/IPs/$ip.$port.cewl.txt --meta --meta_file cewl/IPs/$ip.$port.cewl.meta.txt --email --email_file cewl/IPs/$ip.$port.cewl.emails.txt $h; fi
+	if [[ $option == *[v]* ]] || [[ $option == *[a]* ]]; then nmap --script http-vhosts -p $port $ip -oA nmap/$ip.$port; fi
+	if [[ $option == *[n]* ]] || [[ $option == *[a]* ]]; then nikto -host $h -output nikto/IPs/nikto.$ip.$port.txt; fi
+	if [[ $option == *[w]* ]] || [[ $option == *[a]* ]]; then wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P web_docs $h; fi
 	echo;
 done 10< hostfiles/HTTPIPs.txt
 }
@@ -300,22 +340,24 @@ echo ------------------
 echo SSL Info
 echo ------------------
 while read -u 10 s; do
-        echo -e "\e[91m $s"
+    echo -e "\e[91m $s"
 	#remove https
-        sip=$(echo $s |  cut -d"/" -f3 | cut -d":" -f1)
-        #remove port
-        sport=$(echo $s |  cut -d":" -f3)
+    sip=$(echo $s |  cut -d"/" -f3 | cut -d":" -f1)
+    #remove port
+    sport=$(echo $s |  cut -d":" -f3)
         echo IP: $sip
         echo Port: $sport
 echo -e "\e[0m"
-        wget -t 5 $s/robots.txt -O robots/$sip.$sport.robots.txt
-        cewl --count --verbose --write cewl/IPs/$sip.$sport.cewl.txt --meta --meta_file cewl/IPs/$sip.$sport.cewl.meta.txt --email --email_file cewl/IPs/$sip.$sport.cewl.emails.txt $s
-	nmap --script http-vhosts -p $sport $sip -oA nmap/$sip.$sport
-        nikto -host $s -output nikto/IPs/nikto.$sip.txt
-        wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P web_docs $s
-        sslscan --no-failed --xml=sslscan/IPs/sslscan_$sip.$sport.xml $sip:$sport
-        sslyze $s --reneg --compression --hide_rejected_ciphers --xml_out=sslyze/IPs/sslyze_$sip.$sport.xml
-        echo;
+    if [[ $option == *[r]* ]] || [[ $option == *[a]* ]]; then wget -t 5 $s/robots.txt -O robots/$sip.$sport.robots.txt; fi
+    if [[ $option == *[c]* ]] || [[ $option == *[a]* ]]; then cewl --count --verbose --write cewl/IPs/$sip.$sport.cewl.txt --meta --meta_file cewl/IPs/$sip.$sport.cewl.meta.txt --email --email_file cewl/IPs/$sip.$sport.cewl.emails.txt $s; fi
+	if [[ $option == *[v]* ]] || [[ $option == *[a]* ]]; then nmap --script http-vhosts -p $sport $sip -oA nmap/$sip.$sport; fi
+    if [[ $option == *[n]* ]] || [[ $option == *[a]* ]]; then nikto -host $s -output nikto/IPs/nikto.$sip.txt; fi
+    if [[ $option == *[w]* ]] || [[ $option == *[a]* ]]; then wget -t 5 -e robots=off --wait 1 -nd -r -A pdf,doc,docx,xls,xlsx,old,bac,bak,bc -P web_docs $s; fi
+    if [[ $option == *[s]* ]] || [[ $option == *[a]* ]]; then 
+        sslscan --no-failed --xml=sslscan/IPs/sslscan_$sip.$sport.xml $sip:$sport 2>&1 | tee sslyze/IPs/sslyze_$sip.$sport.txt
+        sslyze --reneg --compression --hide_rejected_ciphers --xml_out=sslyze/IPs/sslyze_$sip.$sport.xml $sip:$sport 2>&1 | tee sslyze/IPs/sslyze_$sip.$sport.txt
+    fi
+    echo;
 done 10< hostfiles/HTTPSIPs.txt
 }
 
@@ -328,7 +370,6 @@ echo HTTP Hosts
 cat hostfiles/HTTPHostnames.txt
 echo HTTPS Hosts
 cat hostfiles/HTTPSHostnames.txt
-
 echo ----------- Performing Recon Against Hostnames ---------------
 HTTPHostInfo
 SSLHostnamesInfo
@@ -337,8 +378,8 @@ HTTPInfo
 SSLInfo
 
 echo -e "\e[0m"
-ruby $custtoolloc/getRedirects.rb -i hostfiles/http_hosts.txt -o http_redirects.csv
-ruby $custtoolloc/getRedirects.rb -i hostfiles/https_hosts.txt -o https_redirects.csv
-ruby $custtoolloc/getRedirects.rb -i hostfiles/SSL_Hostnames.txt -o SecureHostnames_redirects.csv
+ruby $custtoolloc/getRedirects.rb -i hostfiles/HTTPIPs.txt -o http_redirects.csv
+ruby $custtoolloc/getRedirects.rb -i hostfiles/HTTPSIPs.txt -o https_redirects.csv
+ruby $custtoolloc/getRedirects.rb -i hostfiles/HTTPSHostnames.txt -o SecureHostnames_redirects.csv
 ruby $custtoolloc/getRedirects.rb -i hostfiles/HTTPHostnames.txt -o Hostnames_redirects.csv
 exit
