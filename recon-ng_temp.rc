@@ -31,6 +31,7 @@ use recon/hosts-hosts/ip_neighbor
 run
 back
 use recon/hosts-hosts/resolve
+set source DOMAIN
 run
 back
 use reporting/csv

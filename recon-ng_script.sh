@@ -45,36 +45,31 @@
 # Help file
 # link recon with recon-ng - pass multiple params
 
-if [[ -z $1 ]]; then
-	echo Usage: recon-ng_script.sh [DOMAINS FILE NAME] [CLIENT NAME]
+if [[ $# -lt 4 ]] || [[ $1 == --help ]]; then
+	echo Usage: recon-ng_script.sh [DOMAINS FILE NAME] [CLIENT NAME] [EPA BLOCK FOLDER] [SCRIPT LOCATION]
 	echo;
 	exit
 fi
 
-if [[ -z $2 ]]; then
-	echo Usage: recon-ng_script.sh [DOMAINS FILE NAME] [CLIENT NAME]
-	echo;
-	exit
-fi
 
 client=$2
-##################### Replace Folder Location ######################
-folder=in-epa-nov17
-path=~/$folder/$2
-##################### Replace Script Location ######################
-scriptloc=/mnt/hgfs/isadmintools/GitHub/Recon
+folder=$3
+scriptloc=$4
+path=~/$folder/$client/Recon/Identification/recon-ng
 
-mkdir -p /root/$folder
+
+mkdir -p ~/$folder
+mkdir -p ~/$folder/$client
+mkdir -p ~/$folder/$client/Recon
+mkdir -p ~/$folder/$client/Recon/Identification
 mkdir -p $path
-mkdir -p $path/Identification
-mkdir -p $path/Identification/recon-ng
 
 while read -u 10 domain; do
-	sed -e "s/CLIENT/$client/g" $scriptloc/recon-ng_temp.rc > $path/Identification/recon-ng/$client.tmp
-	sed -e "s/DOMAIN/$domain/g" $path/Identification/recon-ng/$client.tmp > $path/Identification/recon-ng/$domain.recon-ng.rc
+	sed -e "s/CLIENT/$client/g" $scriptloc/recon-ng_temp.rc > $path/$client.tmp
+	sed -e "s/DOMAIN/$domain/g" $path/$client.tmp > $path/$domain.recon-ng.rc
 done 10<$1
-rm $path/Identification/recon-ng/*.tmp
+rm $path/*.tmp
 
-for f in $path/Identification/recon-ng/*.rc; do recon-ng -r $f; done
+for f in $path/*.rc; do recon-ng -r $f; done
 
-cp /root/.recon-ng/workspaces/$client/results.csv $path/Identification/recon-ng/recon-ng.results.csv
+cp /root/.recon-ng/workspaces/$client/results.csv $path/recon-ng.results.csv
