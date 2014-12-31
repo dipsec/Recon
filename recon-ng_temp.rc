@@ -11,10 +11,6 @@ use recon/domains-hosts/google_site_web
 set SOURCE DOMAIN
 run
 back
-use recon/domains-hosts/yahoo_site
-set SOURCE DOMAIN
-run
-back
 use recon/domains-hosts/baidu_site
 set SOURCE DOMAIN
 run

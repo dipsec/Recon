@@ -88,7 +88,7 @@ done 10< $domains
 folder=Projects
 path=~/$folder/$client/Recon
 ##################### Replace Script Location ######################
-scriptloc=/mnt/hgfs/isadmintools/GitHub/Recon
+scriptloc=/root/scripts/Recon
 wordlists=/root/scripts/SecLists
 
 echo;
