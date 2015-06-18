@@ -118,8 +118,10 @@ then
         exit
 fi
 
-file=$2
 option=$1
+
+dos2unix -n $2 domains.tmp
+file=domains.tmp
 
 #if [[ -z $1 ]]; then
 #	echo Usage: web_check.sh [FILENAME]
@@ -139,6 +141,7 @@ while read -u 10 f; do
 done 10< $file
 
 custtoolloc=~/toolsv3/Assessment/Access/Web
+
 
 # Sort and Remove Dups in original list
 sort -u $file > $file.tmp

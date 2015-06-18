@@ -113,6 +113,9 @@ mkdir -p $path/robots
 mkdir -p $path/cewl
 mkdir -p $path/web_docs
 
+dos2unix -n $domains ~/$folder/$client/domains.tmp
+domains=~/$folder/$client/domains.tmp
+
 while read -u 10 domain; do
 	echo $domain
 
