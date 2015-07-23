@@ -312,17 +312,7 @@ echo -e "\e[0m"
         if [[ $option == *[s]* ]] || [[ $option == *[a]* ]]; then 
             sslscan --no-failed --xml=$dir/web-check/sslscan/hostnames/sslscan_$ship.$shport.xml $ship:$shport 2>&1 | tee $dir/web-check/sslscan/hostnames/sslscan_$ship.$shport.txt
             sslyze --reneg --compression --hide_rejected_ciphers --xml_out=$dir/web-check/sslyze/hostnames/sslyze_$ship.$shport.xml $ship:$shport 2>&1 | tee $dir/web-check/sslyze/hostnames/sslyze_$ship.$shport.txt
-            nmap --script ssl-enum-ciphers -p $shport $ship -oA $dir/web-check/nmap-SSL/hostnames/nmap_$ship.$shport
-	        cat $dir/web-check/nmap-SSL/hostnames/nmap_$ship.$shport.nmap | grep weak > $dir/web-check/nmap-SSL/hostnames/nmap_$ship.$shport.weak.txt
-	        cat $dir/web-check/nmap-SSL/hostnames/nmap_$ship.$shport.nmap | grep DHE_EXPORT > $dir/web-check/nmap-SSL/hostnames/nmap_$ship.$shport.logjam.txt
-            cat $dir/web-check/nmap-SSL/hostnames/nmap_$ship.$shport.nmap | grep SSL > $dir/web-check/nmap-SSL/hostnames/nmap_$ship.$shport.SSL.txt
-            cat $dir/web-check/nmap-SSL/hostnames/nmap_$ship.$shport.nmap | grep RC4 > $dir/web-check/nmap-SSL/hostnames/nmap_$ship.$shport.RC4.txt
-            xsltproc /toolslinux/exploits/ssl/parse_sslscan/sslscan.xsl $dir/web-check/sslscan/hostnames/sslscan_$ship.$shport.xml > $dir/web-check/sslscan/hostnames/sslscan_$ship.$shport.parsed.txt
-			cat $dir/web-check/sslscan/hostnames/sslscan_$ship.$shport.parsed.txt | awk -F',' '$5<112' > $dir/web-check/sslscan/hostnames/$ship.$shport.weak.txt
-			cat $dir/web-check/sslscan/hostnames/sslscan_$ship.$shport.parsed.txt | grep -B 1 "renegotiation supported=\"1\"" | grep host | cut -d "\"" -f 2,4| sed 's/"/:/g' > $dir/web-check/sslscan/hostnames/$ship.$shport.renegotiation.txt
- 			cat $dir/web-check/sslscan/hostnames/sslscan_$ship.$shport.parsed.txt | grep "vulnerable=\"1\"" > $dir/web-check/sslscan/hostnames/$ship.$shport.vulnerable.txt
- 			cat $dir/web-check/sslscan/hostnames/sslscan_$ship.$shport.parsed.txt | grep "SSL" > $dir/web-check/sslscan/hostnames/$ship.$shport.SSL.txt
- 			cat $dir/web-check/sslscan/hostnames/sslscan_$ship.$shport.parsed.txt | grep "RC4" > $dir/web-check/sslscan/hostnames/$ship.$shport.RC4.txt
+            nmap -PN --script ssl-enum-ciphers -p $shport $ship -oA $dir/web-check/nmap-SSL/hostnames/nmap_$ship.$shport
         fi
         echo;
 done 10< $dir/web-check/hostfiles/HTTPSHostnames.txt
@@ -375,17 +365,7 @@ echo -e "\e[0m"
     if [[ $option == *[s]* ]] || [[ $option == *[a]* ]]; then 
         sslscan --no-failed --xml=$dir/web-check/sslscan/IPs/sslscan_$sip.$sport.xml $sip:$sport 2>&1 | tee $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.txt
         sslyze --reneg --compression --hide_rejected_ciphers --xml_out=$dir/web-check/sslyze/IPs/sslyze_$sip.$sport.xml $sip:$sport 2>&1 | tee $dir/web-check/sslyze/IPs/sslyze_$sip.$sport.txt
-        nmap --script ssl-enum-ciphers -p $sport $sip -oA $dir/web-check/nmap-SSL/IPs/nmap_$sip.$sport
-        cat $dir/web-check/nmap-SSL/IPs/nmap_$sip.$sport.nmap | grep weak > $dir/web-check/nmap-SSL/IPs/nmap_$sip.$sport.weak.txt
-        cat $dir/web-check/nmap-SSL/IPs/nmap_$sip.$sport.nmap | grep DHE_EXPORT > $dir/web-check/nmap-SSL/IPs/nmap_$sip.$sport.logjam.txt
-        cat $dir/web-check/nmap-SSL/IPs/nmap_$sip.$sport.nmap | grep SSL > $dir/web-check/nmap-SSL/IPs/nmap_$sip.$sport.SSL.txt
-        cat $dir/web-check/nmap-SSL/IPs/nmap_$sip.$sport.nmap | grep RC4 > $dir/web-check/nmap-SSL/IPs/nmap_$sip.$sport.RC4.txt
-        xsltproc /toolslinux/exploits/ssl/parse_sslscan/sslscan.xsl $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.xml > $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.parsed.txt
-		cat $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.parsed.txt | awk -F',' '$5<112' > $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.weak.txt
-		cat $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.parsed.txt | grep -B 1 "renegotiation supported=\"1\"" | grep host | cut -d "\"" -f 2,4| sed 's/"/:/g' > $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.renegotiation.txt
- 		cat $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.parsed.txt | grep "vulnerable=\"1\"" > $dir/web-check/sslscan/hostnames/$sip.$sport.vulnerable.txt
- 		cat $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.parsed.txt | grep "SSL" > $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.SSL.txt
- 		cat $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.parsed.txt | grep "RC4" > $dir/web-check/sslscan/IPs/sslscan_$sip.$sport.RC4.txt
+        nmap -PN --script ssl-enum-ciphers -p $sport $sip -oA $dir/web-check/nmap-SSL/IPs/nmap_$sip.$sport
     fi
     echo;
 done 10< $dir/web-check/hostfiles/HTTPSIPs.txt
@@ -412,4 +392,31 @@ ruby $custtoolloc/getRedirects.rb -i $dir/web-check/hostfiles/HTTPIPs.txt -o $di
 ruby $custtoolloc/getRedirects.rb -i $dir/web-check/hostfiles/HTTPSIPs.txt -o $dir/web-check/https_redirects.csv
 ruby $custtoolloc/getRedirects.rb -i $dir/web-check/hostfiles/HTTPSHostnames.txt -o $dir/web-check/SecureHostnames_redirects.csv
 ruby $custtoolloc/getRedirects.rb -i $dir/web-check/hostfiles/HTTPHostnames.txt -o $dir/web-check/Hostnames_redirects.csv
+
+xsltproc /toolslinux/exploits/ssl/parse_sslscan/sslscan.xsl $dir/web-check/sslscan/hostnames/*.xml > $dir/web-check/sslscan/hostnames/sslscan_parsed.txt
+cat $dir/web-check/sslscan/hostnames/sslscan_parsed.txt | awk -F',' '$5<112' > $dir/web-check/sslscan/hostnames/sslscan_weak.txt
+cat $dir/web-check/sslscan/hostnames/sslscan_parsed.txt | grep -B 1 "renegotiation supported=\"1\"" | grep host | cut -d "\"" -f 2,4| sed 's/"/:/g' > $dir/web-check/sslscan/hostnames/sslscan_renegotiation.txt
+cat $dir/web-check/sslscan/hostnames/sslscan_parsed.txt | grep "vulnerable=\"1\"" > $dir/web-check/sslscan/hostnames/sslscan_vulnerable.txt
+cat $dir/web-check/sslscan/hostnames/sslscan_parsed.txt | grep "SSL" > $dir/web-check/sslscan/hostnames/sslscan_SSL.txt
+cat $dir/web-check/sslscan/hostnames/sslscan_parsed.txt | grep "RC4" > $dir/web-check/sslscan/hostnames/sslscan_RC4.txt
+
+cat $dir/web-check/nmap-SSL/hostnames/*.nmap > $dir/web-check/nmap-SSL/hostnames/nmap.combined.txt
+cat $dir/web-check/nmap-SSL/hostnames/nmap.combined.txt | grep weak > $dir/web-check/nmap-SSL/hostnames/nmap.combined.weak.txt
+cat $dir/web-check/nmap-SSL/hostnames/nmap.combined.txt | grep DHE_EXPORT > $dir/web-check/nmap-SSL/hostnames/nmap.combined.logjam.txt
+cat $dir/web-check/nmap-SSL/hostnames/nmap.combined.txt | grep SSL > $dir/web-check/nmap-SSL/hostnames/nmap.combined.SSL.txt
+cat $dir/web-check/nmap-SSL/hostnames/nmap.combined.txt | grep RC4 > $dir/web-check/nmap-SSL/hostnames/nmap.combined.RC4.txt
+
+cat $dir/web-check/nmap-SSL/IPs/*.nmap > $dir/web-check/nmap-SSL/IPs/nmap.combined.nmap
+cat $dir/web-check/nmap-SSL/IPs/nmap.combined.nmap | grep weak > $dir/web-check/nmap-SSL/IPs/nmap.combined.weak.txt
+cat $dir/web-check/nmap-SSL/IPs/nmap.combined.nmap | grep DHE_EXPORT > $dir/web-check/nmap-SSL/IPs/nmap.combined.logjam.txt
+cat $dir/web-check/nmap-SSL/IPs/nmap.combined.nmap | grep SSL > $dir/web-check/nmap-SSL/IPs/nmap.combined.SSL.txt
+cat $dir/web-check/nmap-SSL/IPs/nmap.combined.nmap | grep RC4 > $dir/web-check/nmap-SSL/IPs/nmap.combined.RC4.txt
+
+xsltproc /toolslinux/exploits/ssl/parse_sslscan/sslscan.xsl $dir/web-check/sslscan/IPs/*.xml > $dir/web-check/sslscan/IPs/sslscan_parsed.txt
+cat $dir/web-check/sslscan/IPs/sslscan_parsed.txt | awk -F',' '$5<112' > $dir/web-check/sslscan/IPs/sslscan_parsed.weak.txt
+cat $dir/web-check/sslscan/IPs/sslscan_parsed.txt | grep -B 1 "renegotiation supported=\"1\"" | grep host | cut -d "\"" -f 2,4| sed 's/"/:/g' > $dir/web-check/sslscan/IPs/sslscan_parsed.renegotiation.txt
+cat $dir/web-check/sslscan/IPs/sslscan_parsed.txt | grep "vulnerable=\"1\"" >$dir/web-check/sslscan/IPs/sslscan_parsed.vulnerable.txt
+cat $dir/web-check/sslscan/IPs/sslscan_parsed.txt | grep "SSL" > $dir/web-check/sslscan/IPs/sslscan_parsed.SSL.txt
+cat $dir/web-check/sslscan/IPs/sslscan_parsed.txt | grep "RC4" > $dir/web-check/sslscan/IPs/sslscan_parsed.RC4.txt
+
 exit
