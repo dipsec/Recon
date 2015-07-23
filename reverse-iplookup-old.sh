@@ -26,13 +26,11 @@ while read -u 10 f; do
    fi
 done 10< $1
 
-dos2unix -n $1 ~/$folder/$client/ips.tmp
-file=~/$folder/$client/ips.tmp
 
 while read -u 10 ip; do
         echo $ip
-	echo $ip >> $file.reversed.txt
-        dig +short -x $ip | xargs echo -n >> $file.reversed.txt
-	echo " " >> $file.reversed.txt
-	echo "--------------------------" >> $file.reversed.txt
-done 10< $file
+	echo $ip >> $1.reversed.txt
+        dig +short -x $ip | xargs echo -n >> $1.reversed.txt
+	echo " " >> $1.reversed.txt
+	echo "--------------------------" >> $1.reversed.txt
+done 10< $1

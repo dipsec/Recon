@@ -26,14 +26,11 @@ while read -u 10 f; do
    fi
 done 10< $1
 
-dos2unix -n $1 ~/$folder/$client/domains.tmp
-file=~/$folder/$client/domains.tmp
-
 while read -u 10 domain; do
 	echo $domain
 	ping -c 1 $domain |cut -d' ' -f2,3 | grep -v statistics | grep -v packets >> $1.resolved.tmp
-done 10< $file
+done 10< $1
 
-grep -v ping $file.resolved.tmp |sort -u > $file.resolved2.tmp
-sed '/^$/d' $file.resolved2.tmp > $file.resolved.txt
+grep -v ping $1.resolved.tmp |sort -u > $1.resolved2.tmp
+sed '/^$/d' $1.resolved2.tmp > $1.resolved.txt
 rm *.tmp
